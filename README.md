@@ -1,9 +1,8 @@
 # udacity_repo2
 This is a repository to gain familiarity with git and Github.
 
-Some change
-=======
-Usefull git command
+# Usefull git commands
+=======================
 ## git clone url
 create a local repo clone of the repository referenced by the url
 
@@ -23,4 +22,3 @@ pushes changes in local to the remote repository
 
 ## git checkout -b "branch name"
 creates a new branch and switches to it
-

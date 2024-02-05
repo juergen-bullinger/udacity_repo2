@@ -16,5 +16,12 @@ Activates the branch
 ## git pull
 pulls changes done on remote into the local repository
 
-# git push
+## git push
 pushes changes in local to the remote repository
+
+## git checkout -b develop
+create a new branch and switch to it
+
+## git branch -d develop
+delete branch develop
+

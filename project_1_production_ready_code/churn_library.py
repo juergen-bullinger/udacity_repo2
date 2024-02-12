@@ -10,18 +10,17 @@ Created on feb 10th 2024
 # import libraries
 import os
 import logging
+import pickle
+
 import pandas as pd
 import numpy as np
-
-import pickle
 
 from matplotlib import pyplot as plt
 import seaborn as sns
 
 from sklearn.model_selection import GridSearchCV
-from sklearn.metrics import classification_report
+from sklearn.metrics import classification_report, plot_roc_curve
 from sklearn.model_selection import train_test_split
-
 
 from sklearn.linear_model import LogisticRegression
 from sklearn.ensemble import RandomForestClassifier
@@ -302,6 +301,7 @@ def train_models(x_train, x_test, y_train, y_test):
               None
     '''
     logging.info("training models")
+
     # grid search
     rfc = RandomForestClassifier(random_state=42)
     # Use a different solver if the default 'lbfgs' fails to converge
@@ -320,18 +320,57 @@ def train_models(x_train, x_test, y_train, y_test):
     cv_rfc = GridSearchCV(estimator=rfc, param_grid=param_grid, cv=5)
     cv_rfc.fit(x_train, y_train)
     best_rfc = cv_rfc.best_estimator_
-    
+
     lrc.fit(x_train, y_train)
-    
+
     logging.info("writing pickled models")
     try:
-        with open("./models/rfc_model.pkl", "wb") as fp:
-            pickle.dump(best_rfc, fp)
+        with open("./models/rfc_model.pkl", "wb") as fp_model:
+            pickle.dump(best_rfc, fp_model)
 
-        with open("./models/logistic_model.pkl", "wb") as fp:
-            pickle.dump(lrc, fp)
+        with open("./models/logistic_model.pkl", "wb") as fp_model:
+            pickle.dump(lrc, fp_model)
     except FileNotFoundError as ex:
         logging.error("error pickling the models: %s", ex)
+
+    # calculate the feature importance plots
+    feature_importance_plot(
+        best_rfc,
+        df_bank_data,
+        "./images/results/feature_importances_random_forest.png"
+    )
+    feature_importance_plot(
+        lrc,
+        df_bank_data,
+        "./images/results/feature_importances_linear_regression.png"
+    )
+
+    # Create roc plots
+    plt.figure(figsize=(20, 5))
+    plot_roc_curve(best_rfc, x_test, y_test)
+    plt.savefig(
+        "./images/results/roc_random_forest.png"
+    )
+
+    plt.figure(figsize=(20, 5))
+    plot_roc_curve(lrc, x_test, y_test)
+    plt.savefig(
+        "./images/results/roc_linear_regression.png"
+    )
+
+    # classification report
+    y_train_preds_lr = lrc.predict(x_train)
+    y_train_preds_rf = best_rfc.predict(x_train)
+    y_test_preds_lr = lrc.predict(x_test)
+    y_test_preds_rf = best_rfc.predict(x_test)
+    classification_report_image(
+        y_train,
+        y_test,
+        y_train_preds_lr,
+        y_train_preds_rf,
+        y_test_preds_lr,
+        y_test_preds_rf,
+    )
 
 
 if __name__ == "__main__":
@@ -339,5 +378,14 @@ if __name__ == "__main__":
     if df_bank_data is not None:
         # we got some data, so we can continue
         perform_eda(df_bank_data)
-        perform_feature_engineering(df_bank_data, "Churn")
-        feature_importance_plot(model, df_bank_data, output_pth)
+        x_train_d, x_test_d, y_train_d, y_test_d = perform_feature_engineering(
+            df_bank_data,
+            "Churn"
+        )
+        # train the models and calculate the feature importances
+        train_models(
+            x_train_d,
+            x_test_d,
+            y_train_d,
+            y_test_d
+        )

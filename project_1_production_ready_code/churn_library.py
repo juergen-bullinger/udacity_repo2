@@ -13,6 +13,8 @@ import logging
 import pandas as pd
 import numpy as np
 
+import pickle
+
 from matplotlib import pyplot as plt
 import seaborn as sns
 
@@ -314,10 +316,22 @@ def train_models(x_train, x_test, y_train, y_test):
         'criterion': ['gini', 'entropy']
     }
 
+    logging.info("performing grid search for the random forest classifier")
     cv_rfc = GridSearchCV(estimator=rfc, param_grid=param_grid, cv=5)
     cv_rfc.fit(x_train, y_train)
-
+    best_rfc = cv_rfc.best_estimator_
+    
     lrc.fit(x_train, y_train)
+    
+    logging.info("writing pickled models")
+    try:
+        with open("./models/rfc_model.pkl", "wb") as fp:
+            pickle.dump(best_rfc, fp)
+
+        with open("./models/logistic_model.pkl", "wb") as fp:
+            pickle.dump(lrc, fp)
+    except FileNotFoundError as ex:
+        logging.error("error pickling the models: %s", ex)
 
 
 if __name__ == "__main__":

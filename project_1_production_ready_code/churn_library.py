@@ -48,13 +48,14 @@ def import_data(pth):
     '''
     try:
         logging.info("reading %s", pth)
-        df_data = pd.read_csv(pth)
+        df_data = pd.read_csv(pth, index_col=0)
     except FileNotFoundError as ex:
         logging.error(
             "file %s was not found - import not possible: %s",
             pth,
             ex)
         return None
+    # caclculate Churn (the target column)
     df_data['Churn'] = df_data['Attrition_Flag'].apply(
         lambda val: 0 if val == "Existing Customer" else 1
     )

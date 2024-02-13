@@ -58,6 +58,7 @@ def import_data(pth):
     df_data['Churn'] = df_data['Attrition_Flag'].apply(
         lambda val: 0 if val == "Existing Customer" else 1
     )
+    df_data.drop(columns=["Attrition_Flag"], inplace=True)
     return df_data
 
 
@@ -102,7 +103,7 @@ def perform_eda(df_data):
 
 def categorize_helper(df_data, column_name, response):
     '''
-    categorize the spezfied column name by creating a column named
+    categorize the specified column name by creating a column named
     "{column_name}_{response}"
 
     input:
@@ -113,9 +114,9 @@ def categorize_helper(df_data, column_name, response):
             result dataframe
     '''
     category_lst = []
-    gender_groups = df_data.groupby(column_name).mean()[response]
+    column_groups = df_data.groupby(column_name).mean()[response]
     for val in df_data[column_name]:
-        category_lst.append(gender_groups.loc[val])
+        category_lst.append(column_groups.loc[val])
 
     df_data[f'{column_name}_{response}'] = category_lst
     return df_data
@@ -137,10 +138,6 @@ def encoder_helper(df_data, category_lst, response):
             df: pandas dataframe with new columns for
     '''
     logging.info("starting column encoding...")
-    df_data['Churn'] = df_data['Attrition_Flag'].apply(
-        lambda val: 0 if val == "Existing Customer" else 1
-    )
-
     for cat_col in category_lst:
         if cat_col != response:
             # skip the target column
@@ -168,7 +165,15 @@ def perform_feature_engineering(df_data, response):
     # get the list of object columns, which are all considered to be categories
     cat_cols = df_data.select_dtypes(include="object").columns.to_list()
     df_data = encoder_helper(df_data, cat_cols, "Churn")
-    feature_cols = [col for col in df_data.columns if col != response]
+    feature_cols = [
+        'Customer_Age', 'Dependent_count', 'Months_on_book',
+        'Total_Relationship_Count', 'Months_Inactive_12_mon',
+        'Contacts_Count_12_mon', 'Credit_Limit', 'Total_Revolving_Bal',
+        'Avg_Open_To_Buy', 'Total_Amt_Chng_Q4_Q1', 'Total_Trans_Amt',
+        'Total_Trans_Ct', 'Total_Ct_Chng_Q4_Q1', 'Avg_Utilization_Ratio',
+        'Gender_Churn', 'Education_Level_Churn', 'Marital_Status_Churn',
+        'Income_Category_Churn', 'Card_Category_Churn',
+    ]
     return train_test_split(
         df_data[feature_cols],
         df_data[response],
@@ -262,9 +267,8 @@ def feature_importance_plot(model, x_data, output_pth):
     output:
              None
     '''
-    image_file = f"{output_pth}/feature_importances.png"
     logging.info("generating the image for the feature importances")
-    logging.info("storing result in %s", image_file)
+    logging.info("storing result in %s", output_pth)
     # Calculate feature importances
     importances = model.feature_importances_
     # Sort feature importances in descending order
@@ -275,8 +279,6 @@ def feature_importance_plot(model, x_data, output_pth):
 
     # Create plot
     plt.figure(figsize=(20, 5))
-
-    # Create plot title
     plt.title("Feature Importance")
     plt.ylabel('Importance')
 
@@ -285,7 +287,7 @@ def feature_importance_plot(model, x_data, output_pth):
 
     # Add feature names as x-axis labels
     plt.xticks(range(x_data.shape[1]), names, rotation=90)
-    plt.savefig(image_file)
+    plt.savefig(output_pth)
 
 
 def train_models(x_train, x_test, y_train, y_test):
@@ -308,7 +310,6 @@ def train_models(x_train, x_test, y_train, y_test):
     # Reference:
     # https://scikit-learn.org/stable/modules/linear_model.html#logistic-regression
     lrc = LogisticRegression(solver='lbfgs', max_iter=3000)
-
     param_grid = {
         'n_estimators': [200, 500],
         'max_features': ['auto', 'sqrt'],
@@ -320,7 +321,6 @@ def train_models(x_train, x_test, y_train, y_test):
     cv_rfc = GridSearchCV(estimator=rfc, param_grid=param_grid, cv=5)
     cv_rfc.fit(x_train, y_train)
     best_rfc = cv_rfc.best_estimator_
-
     lrc.fit(x_train, y_train)
 
     logging.info("writing pickled models")
@@ -334,15 +334,11 @@ def train_models(x_train, x_test, y_train, y_test):
         logging.error("error pickling the models: %s", ex)
 
     # calculate the feature importance plots
+    x_data = pd.concat([x_train, x_test])
     feature_importance_plot(
         best_rfc,
-        df_bank_data,
+        x_data,
         "./images/results/feature_importances_random_forest.png"
-    )
-    feature_importance_plot(
-        lrc,
-        df_bank_data,
-        "./images/results/feature_importances_linear_regression.png"
     )
 
     # Create roc plots
@@ -359,17 +355,13 @@ def train_models(x_train, x_test, y_train, y_test):
     )
 
     # classification report
-    y_train_preds_lr = lrc.predict(x_train)
-    y_train_preds_rf = best_rfc.predict(x_train)
-    y_test_preds_lr = lrc.predict(x_test)
-    y_test_preds_rf = best_rfc.predict(x_test)
     classification_report_image(
         y_train,
         y_test,
-        y_train_preds_lr,
-        y_train_preds_rf,
-        y_test_preds_lr,
-        y_test_preds_rf,
+        lrc.predict(x_train),
+        best_rfc.predict(x_train),
+        lrc.predict(x_test),
+        best_rfc.predict(x_test),
     )
 
 

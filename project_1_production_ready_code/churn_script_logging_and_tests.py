@@ -46,8 +46,7 @@ EXAMPLE_CSV = """,CLIENTNUM,Attrition_Flag,Customer_Age,Gender,Dependent_count,E
 144,767712558,Attrited Customer,59,M,1,College,Single,$60K - $80K,Blue,53,2,3,3,14979.0,0,14979.0,0.71,530,10,1.0,0.0"""
 
 
-@pytest.fixture
-def raw_test_data():
+def import_raw_test_data():
     """
     create a test data frame from the first 10 lines of the csv for each
     category as of feb 2024 (20 lines in total)
@@ -59,6 +58,15 @@ def raw_test_data():
     )
     df_data.drop(columns=["Attrition_Flag"], inplace=True)
     return df_data
+
+
+@pytest.fixture
+def raw_test_data():
+    """
+    create a test data frame from the first 10 lines of the csv for each
+    category as of feb 2024 (20 lines in total)
+    """
+    return import_raw_test_data()
 
 
 def helper_create_subdirs(pth):
@@ -122,6 +130,7 @@ def test_eda(raw_test_data):
                 file_path = test_path / "images" / "eda" / file
                 logging.info("checking presence of %s", file_path)
                 assert file_path.exists()
+            logging.info("Testing eda: SUCCESS")
         except AssertionError as err:
             logging.error(
                 "test_eda: %s",
@@ -150,6 +159,7 @@ def test_encoder_helper(raw_test_data):
             assert encoded_col in df_result.columns, (
                 f"{encoded_col} was not generated"
             )
+        logging.info("Testing encoder helper: SUCCESS")
     except AssertionError as err:
         logging.error(
             "test_encoder_helper: %s",
@@ -173,6 +183,7 @@ def test_perform_feature_engineering(raw_test_data):
         assert len(data_tuple[1]) == 6 # x_test_d
         assert len(data_tuple[2]) == 14 # y_train_d
         assert len(data_tuple[3]) == 6 # y_test_d
+        logging.info("Testing perform feature engineering: SUCCESS")
     except AssertionError as err:
         logging.error(
             "test_perform_feature_engineering: %s",
@@ -212,6 +223,7 @@ def test_train_models(raw_test_data):
                 file_path = test_path / "images" / "results" / file
                 logging.info("checking presence of %s", file_path)
                 assert file_path.exists()
+            logging.info("Testing train models: SUCCESS")
         except AssertionError as err:
             logging.error(
                 "test_eda: %s",
@@ -225,4 +237,40 @@ def test_train_models(raw_test_data):
 
 
 if __name__ == "__main__":
-    pass
+    # don't know why we would need this, since this is usally run
+    # from pytest, which also handles a great deal of logging,
+    # but according to the sketched solution it looks like we
+    # do not use features of pytest
+    try:
+        test_import()
+    except AssertionError as err:
+        logging.error("an exception was raised in test_import: ", err)
+        
+    try:
+        test_eda(import_raw_test_data())
+    except AssertionError as err:
+        logging.error("an exception was raised in test_eda: ", err)
+
+    try:
+        test_encoder_helper(import_raw_test_data())
+    except AssertionError as err:
+        logging.error("an exception was raised in test_encoder_helper: ", err)
+
+    try:
+        test_perform_feature_engineering(import_raw_test_data())
+    except AssertionError as err:
+        logging.error(
+            "an exception was raised in test_perform_feature_engineering: ", 
+            err
+        )
+
+    try:
+        test_perform_feature_engineering(import_raw_test_data())
+    except AssertionError as err:
+        logging.error(
+            "an exception was raised in test_perform_feature_engineering: ", 
+            err
+        )
+
+
+
